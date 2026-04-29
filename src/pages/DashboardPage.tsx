@@ -23,9 +23,11 @@ import { SmartAlertsPanel } from '../components/SmartAlertsPanel'
 import { useDashboardPreferences } from '../context/DashboardPreferencesContext'
 import { filterByRange, getReferenceDate } from '../utils/filters'
 import {
+  getAttributionChannelPerformance,
   getCampaignTrendSeries,
   getConversionForecast,
   getGranularSegments,
+  getLeadHealthSummary,
   getInitials,
   getKpis,
   getLeadVolume,
@@ -33,7 +35,7 @@ import {
   getSourceBreakdown,
 } from '../utils/metrics'
 import type { DateRangeFilter } from '../types'
-import { getSmartAlerts } from '../utils/smartFeatures'
+import { getLeadAnomalies, getSmartAlerts } from '../utils/smartFeatures'
 
 const PIE_COLORS = ['#003366', '#00A651', '#8da8c5']
 const SEGMENT_COLORS = ['#C5D9ED', '#7DA4CE', '#3F7BB4', '#003366']
@@ -55,8 +57,14 @@ export const DashboardPage = () => {
   const forecastWindows = getPredictedHighIntentVolume(scopedLeads)
   const conversionForecast = getConversionForecast(scopedLeads)
   const campaignTrend = getCampaignTrendSeries(scopedLeads).slice(-14)
-  const topLeads = [...scopedLeads].sort((left, right) => right.score - left.score).slice(0, 5)
+  const topLeads = [...scopedLeads]
+    .filter((lead) => !lead.exclusion.excluded)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5)
   const alerts = getSmartAlerts(scopedLeads)
+  const anomalies = getLeadAnomalies(scopedLeads)
+  const healthSummary = getLeadHealthSummary(scopedLeads)
+  const attributionBreakdown = getAttributionChannelPerformance(scopedLeads)
 
   const widgetLabels: Array<{ key: keyof typeof widgets; label: string }> = [
     { key: 'kpis', label: 'KPI Cards' },
@@ -102,10 +110,76 @@ export const DashboardPage = () => {
           <KpiCard title="High Intent" value={kpis.highIntentLeads.toString()} trend="+8.1%" />
           <KpiCard title="Conversion Rate" value={`${kpis.conversionRate}%`} trend="+2.3%" />
           <KpiCard title="Avg Lead Score" value={kpis.avgLeadScore.toString()} trend="+5 pts" />
+          <KpiCard title="Avg Health Score" value={healthSummary.avgHealth.toString()} trend="engagement + intent" />
+          <KpiCard title="Excluded Leads" value={healthSummary.excluded.toString()} trend="quality filter applied" />
         </div>
       )}
 
       {widgets.alerts && <SmartAlertsPanel alerts={alerts} />}
+
+      <div className="two-col">
+        <article className="surface panel">
+          <h2>AI Quality Monitor</h2>
+          <p className="panel-subtitle">Anomaly detection and lead health segmentation</p>
+          <div className="metric-stack">
+            <div className="metric-tile">
+              <p className="kv-key">Sales ready</p>
+              <p className="metric-value">{healthSummary.salesReady}</p>
+            </div>
+            <div className="metric-tile">
+              <p className="kv-key">Nurture</p>
+              <p className="metric-value">{healthSummary.nurture}</p>
+            </div>
+            <div className="metric-tile">
+              <p className="kv-key">Inactive</p>
+              <p className="metric-value">{healthSummary.inactive}</p>
+            </div>
+          </div>
+          <div className="kv-list" style={{ marginTop: '0.75rem' }}>
+            {anomalies.length === 0 ? (
+              <p className="subtle">No abnormal source, duplication, or validation patterns detected.</p>
+            ) : (
+              anomalies.map((anomaly) => (
+                <div key={anomaly.id} className="metric-tile">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <p className="panel-title" style={{ fontSize: '0.9rem' }}>
+                      {anomaly.title}
+                    </p>
+                    <span className={`status-badge status-${anomaly.severity}`}>{anomaly.severity}</span>
+                  </div>
+                  <p className="subtle">{anomaly.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </article>
+        <article className="surface panel">
+          <h2>Multi-Touch Attribution Snapshot</h2>
+          <p className="panel-subtitle">Channel credit contribution to conversion journeys</p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th>Credit</th>
+                  <th>Leads</th>
+                  <th>High-intent rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributionBreakdown.map((row) => (
+                  <tr key={row.channel}>
+                    <td>{row.channel}</td>
+                    <td>{row.credit}</td>
+                    <td>{row.leads}</td>
+                    <td>{row.highIntentRate}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
 
       {(widgets.leadVolume || widgets.sourceBreakdown) && (
         <div className="two-col">

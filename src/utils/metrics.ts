@@ -194,6 +194,69 @@ export const getConversionForecast = (
   return { monthExpected, quarterExpected }
 }
 
+export const getLeadHealthSummary = (
+  leads: Lead[],
+): {
+  avgHealth: number
+  salesReady: number
+  nurture: number
+  inactive: number
+  excluded: number
+} => {
+  if (leads.length === 0) {
+    return { avgHealth: 0, salesReady: 0, nurture: 0, inactive: 0, excluded: 0 }
+  }
+
+  const avgHealth = Math.round(
+    leads.reduce((accumulator, lead) => accumulator + lead.health.score, 0) / leads.length,
+  )
+  const salesReady = leads.filter((lead) => lead.health.classification === 'Sales Ready').length
+  const nurture = leads.filter((lead) => lead.health.classification === 'Nurture').length
+  const inactive = leads.filter((lead) => lead.health.classification === 'Inactive').length
+  const excluded = leads.filter((lead) => lead.exclusion.excluded).length
+
+  return { avgHealth, salesReady, nurture, inactive, excluded }
+}
+
+export const getAttributionChannelPerformance = (
+  leads: Lead[],
+): Array<{
+  channel: 'Meta' | 'Email' | 'Landing Page' | 'Direct'
+  credit: number
+  leads: number
+  highIntentRate: number
+}> => {
+  const channels: Array<'Meta' | 'Email' | 'Landing Page' | 'Direct'> = [
+    'Meta',
+    'Email',
+    'Landing Page',
+    'Direct',
+  ]
+
+  return channels.map((channel) => {
+    const leadsWithChannel = leads.filter((lead) =>
+      lead.attribution.touches.some((touch) => touch.channel === channel),
+    )
+    const totalCredit = leads.reduce((accumulator, lead) => {
+      const leadCredit = lead.attribution.touches
+        .filter((touch) => touch.channel === channel)
+        .reduce((touchTotal, touch) => touchTotal + touch.credit, 0)
+      return accumulator + leadCredit
+    }, 0)
+    const highIntentCount = leadsWithChannel.filter((lead) => lead.status === 'High Intent').length
+
+    return {
+      channel,
+      credit: Number(totalCredit.toFixed(2)),
+      leads: leadsWithChannel.length,
+      highIntentRate:
+        leadsWithChannel.length === 0
+          ? 0
+          : Number(((highIntentCount / leadsWithChannel.length) * 100).toFixed(1)),
+    }
+  })
+}
+
 export const getCreativePerformanceRows = (
   leads: Lead[],
 ): Array<{
@@ -251,4 +314,8 @@ export const getBehaviorHistory = (
   { label: 'Email clicks', value: lead.behavioral.emailClicks },
   { label: 'Ad interactions', value: lead.behavioral.adInteractions },
   { label: 'Form submissions', value: lead.behavioral.formSubmissions },
+  { label: 'Page visits', value: lead.behavioral.pageVisits },
+  { label: 'Pricing page views', value: lead.behavioral.pricingPageViews },
+  { label: 'Demo requests', value: lead.behavioral.demoRequests },
+  { label: 'Quote requests', value: lead.behavioral.quoteRequests },
 ]

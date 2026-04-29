@@ -24,6 +24,8 @@ export const LeadsPage = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | LeadStatus>('all')
   const [sourceFilter, setSourceFilter] = useState<'all' | LeadSource>('all')
   const [rangeFilter, setRangeFilter] = useState<DateRangeFilter>('month')
+  const [healthFilter, setHealthFilter] = useState<'all' | 'Sales Ready' | 'Nurture' | 'Inactive'>('all')
+  const [qualityFilter, setQualityFilter] = useState<'all' | 'Excluded' | 'Valid Only'>('all')
   const [search, setSearch] = useState('')
 
   const referenceDate = getReferenceDate(leads)
@@ -36,6 +38,14 @@ export const LeadsPage = () => {
       .filter((lead) => {
         if (statusFilter !== 'all' && lead.status !== statusFilter) return false
         if (sourceFilter !== 'all' && lead.source !== sourceFilter) return false
+        if (healthFilter !== 'all' && lead.health.classification !== healthFilter) return false
+        if (qualityFilter === 'Excluded' && !lead.exclusion.excluded) return false
+        if (
+          qualityFilter === 'Valid Only' &&
+          (!lead.validation.emailValid || !lead.validation.phoneValid || lead.exclusion.excluded)
+        ) {
+          return false
+        }
 
         if (!query) return true
         const fullName = `${lead.firstName} ${lead.lastName}`.toLowerCase()
@@ -46,7 +56,7 @@ export const LeadsPage = () => {
         )
       })
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-  }, [leads, rangeFilter, referenceDate, search, sourceFilter, statusFilter])
+  }, [healthFilter, leads, qualityFilter, rangeFilter, referenceDate, search, sourceFilter, statusFilter])
 
   if (error) {
     return <p className="loading-state">Failed to load leads: {error}</p>
@@ -84,6 +94,27 @@ export const LeadsPage = () => {
           <option value="Meta - Facebook">Facebook</option>
           <option value="Meta - Instagram">Instagram</option>
           <option value="Email">Email</option>
+        </select>
+        <select
+          className="input"
+          value={healthFilter}
+          onChange={(event) =>
+            setHealthFilter(event.target.value as 'all' | 'Sales Ready' | 'Nurture' | 'Inactive')
+          }
+        >
+          <option value="all">All health classes</option>
+          <option value="Sales Ready">Sales Ready</option>
+          <option value="Nurture">Nurture</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+        <select
+          className="input"
+          value={qualityFilter}
+          onChange={(event) => setQualityFilter(event.target.value as 'all' | 'Excluded' | 'Valid Only')}
+        >
+          <option value="all">All quality states</option>
+          <option value="Valid Only">Valid only</option>
+          <option value="Excluded">Excluded only</option>
         </select>
         <input
           className="input"
@@ -124,6 +155,8 @@ export const LeadsPage = () => {
                   <th>Score</th>
                   <th>Status</th>
                   <th>Source</th>
+                  <th>Health</th>
+                  <th>Validation</th>
                   <th>TCPA</th>
                   <th>Actions</th>
                 </tr>
@@ -137,6 +170,8 @@ export const LeadsPage = () => {
                     <td>{lead.score}</td>
                     <td>{lead.status}</td>
                     <td>{lead.source.replace('Meta - ', 'Meta ')}</td>
+                    <td>{lead.health.score} · {lead.health.classification}</td>
+                    <td>{lead.validation.issues.length === 0 ? 'Clean' : lead.validation.issues.length}</td>
                     <td>{lead.compliance.compliant ? 'Compliant' : 'Review'}</td>
                     <td>
                       <Link to={`/leads/${encodeURIComponent(lead.id)}`}>View →</Link>

@@ -16,6 +16,7 @@ export const Layout = () => (
         <div className="brand-title">PropLead</div>
         <p className="brand-subtitle">Smarter Leads, Smarter Insurance</p>
       </div>
+      <p className="sidebar-section-label">Navigation</p>
       <nav className="sidebar-nav">
         {navItems.map((item) => (
           <NavLink
@@ -30,6 +31,10 @@ export const Layout = () => (
           </NavLink>
         ))}
       </nav>
+      <div className="sidebar-user-card">
+        <p className="sidebar-user-name">Alyson Team</p>
+        <p className="sidebar-user-meta">Revenue Ops Workspace</p>
+      </div>
     </aside>
     <main className="layout-main">
       <Outlet />

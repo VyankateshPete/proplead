@@ -42,6 +42,10 @@ export interface BehavioralMetrics {
   emailClicks: number
   adInteractions: number
   formSubmissions: number
+  pageVisits: number
+  pricingPageViews: number
+  demoRequests: number
+  quoteRequests: number
   lastEngagedAt: string
 }
 
@@ -93,6 +97,85 @@ export interface ScoringConfig {
     adInteractions: number
     formSubmissions: number
   }
+  campaignRules: CampaignScoringRule[]
+  exclusionRules: ExclusionRules
+  learning: LearningConfig
+}
+
+export interface CampaignScoringRule {
+  id: string
+  label: string
+  source: LeadSource
+  sourceWeightBoost: number
+  behaviorWeights: {
+    emailOpens: number
+    emailClicks: number
+    adInteractions: number
+    formSubmissions: number
+  }
+}
+
+export interface ExclusionRules {
+  inactivityDays: number
+  minHealthScore: number
+  excludedIndustries: string[]
+}
+
+export interface LearningConfig {
+  enabled: boolean
+  learningRate: number
+  lookbackDays: number
+}
+
+export interface LeadValidation {
+  emailValid: boolean
+  phoneValid: boolean
+  duplicateEmail: boolean
+  duplicatePhone: boolean
+  disposableEmail: boolean
+  issues: string[]
+}
+
+export interface LeadEnrichment {
+  providerCoverage: string[]
+  confidence: number
+  companySize: string
+  revenueBand: string
+}
+
+export interface LeadHealth {
+  score: number
+  engagementScore: number
+  intentScore: number
+  classification: 'Sales Ready' | 'Nurture' | 'Inactive'
+  recommendation: string
+}
+
+export interface AttributionTouchpoint {
+  id: string
+  channel: 'Meta' | 'Email' | 'Landing Page' | 'Direct'
+  interaction: string
+  credit: number
+  timestamp: string
+}
+
+export interface MultiTouchAttribution {
+  model: 'W-Shaped'
+  touches: AttributionTouchpoint[]
+  topChannel: AttributionTouchpoint['channel']
+}
+
+export interface LeadExclusion {
+  excluded: boolean
+  reasons: string[]
+}
+
+export interface LearningSnapshot {
+  baselineScore: number
+  adaptedScore: number
+  adjustment: number
+  confidence: number
+  reason: string
 }
 
 export interface IntegrationConnection {
@@ -150,6 +233,12 @@ export interface Lead {
   automation: AutomationState
   routing: RoutingDecision
   qualityInsight: LeadQualityInsight
+  health: LeadHealth
+  validation: LeadValidation
+  enrichment: LeadEnrichment
+  attribution: MultiTouchAttribution
+  exclusion: LeadExclusion
+  learning: LearningSnapshot
   cdpProfile: CDPProfile | null
   activityTimeline: LeadEvent[]
 }
@@ -160,6 +249,22 @@ export interface AlertEvent {
   title: string
   description: string
   action: string
+}
+
+export interface AnomalyDetection {
+  id: string
+  severity: 'critical' | 'warning' | 'info'
+  title: string
+  description: string
+  affectedCount: number
+}
+
+export interface SmartReportInsight {
+  id: string
+  title: string
+  finding: string
+  recommendation: string
+  priority: 'High' | 'Medium' | 'Low'
 }
 
 export interface AbTestResult {
