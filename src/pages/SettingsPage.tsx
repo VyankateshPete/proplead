@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useScoringConfig } from '../context/ScoringConfigContext'
 import type { IntegrationConnection, ScoringConfig } from '../types'
+import { getAdapterBackedIntegrations } from '../services/adapters/adapterDiagnostics'
 
 const numberField = (
   value: number,
@@ -26,90 +27,15 @@ export const SettingsPage = () => {
   const { scoringConfig, setScoringConfig } = useScoringConfig()
 
   const integrations: IntegrationConnection[] = useMemo(
-    () => [
-      {
-        key: 'salesforce',
-        label: 'Salesforce',
-        connected: true,
-        statusText: 'Connected',
-        lastSyncAt: '2m ago',
-        category: 'CRM',
-      },
-      {
-        key: 'hubspot',
-        label: 'HubSpot',
-        connected: false,
-        statusText: 'Not connected',
-        lastSyncAt: 'Never',
-        category: 'CRM',
-      },
-      {
-        key: 'meta',
-        label: 'Meta Lead Gen API',
-        connected: true,
-        statusText: 'Connected',
-        lastSyncAt: '5m ago',
-        category: 'Advertising',
-      },
-      {
-        key: 'mailchimp',
-        label: 'Mailchimp',
-        connected: true,
-        statusText: 'Connected',
-        lastSyncAt: '4m ago',
-        category: 'Email',
-      },
-      {
-        key: 'activecampaign',
-        label: 'ActiveCampaign',
-        connected: false,
-        statusText: 'Optional',
-        lastSyncAt: 'Never',
-        category: 'Email',
-      },
-      {
-        key: 'zoho',
-        label: 'Zoho CRM',
-        connected: false,
-        statusText: 'Optional',
-        lastSyncAt: 'Never',
-        category: 'CRM',
-      },
-      {
-        key: 'pipedrive',
-        label: 'Pipedrive',
-        connected: false,
-        statusText: 'Optional',
-        lastSyncAt: 'Never',
-        category: 'CRM',
-      },
-      {
-        key: 'clearbit',
-        label: 'Clearbit',
-        connected: true,
-        statusText: 'Connected',
-        lastSyncAt: '6m ago',
-        category: 'Enrichment',
-      },
-      {
-        key: 'zoominfo',
-        label: 'ZoomInfo',
-        connected: false,
-        statusText: 'Onboarding',
-        lastSyncAt: 'Pending',
-        category: 'Enrichment',
-      },
-      {
-        key: 'linkedin',
-        label: 'LinkedIn Enrichment',
-        connected: true,
-        statusText: 'Connected',
-        lastSyncAt: '8m ago',
-        category: 'Enrichment',
-      },
-    ],
+    () => getAdapterBackedIntegrations(),
     [],
   )
+  const adapterMessages = integrations
+    .filter((integration) =>
+      ['meta', 'mailchimp', 'activecampaign', 'clearbit', 'zoominfo'].includes(integration.key),
+    )
+    .map((integration) => `${integration.label}: ${integration.statusText}`)
+    .join(' · ')
 
   const updateConfig = (next: Partial<ScoringConfig>): void => {
     const merged = { ...scoringConfig, ...next }
@@ -306,6 +232,7 @@ export const SettingsPage = () => {
       <article className="surface panel" style={{ marginTop: '1rem' }}>
         <h2 className="panel-title">Integrations</h2>
         <p className="panel-subtitle">CRM, ad platform, email, and enrichment sync status</p>
+        <p className="subtle">Adapter messages: {adapterMessages}</p>
         <div className="table-wrap">
           <table>
             <thead>
