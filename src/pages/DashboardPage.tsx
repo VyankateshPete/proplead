@@ -19,6 +19,7 @@ import { useAppData } from '../context/AppDataContext'
 import { KpiCard } from '../components/KpiCard'
 import { FilterTabs } from '../components/FilterTabs'
 import { StatusBadge } from '../components/StatusBadge'
+import { SmartAlertsPanel } from '../components/SmartAlertsPanel'
 import { filterByRange, getReferenceDate } from '../utils/filters'
 import {
   getCampaignTrendSeries,
@@ -30,6 +31,7 @@ import {
   getSourceBreakdown,
 } from '../utils/metrics'
 import type { DateRangeFilter } from '../types'
+import { getSmartAlerts } from '../utils/smartFeatures'
 
 const PIE_COLORS = ['#003366', '#00A651', '#8da8c5']
 const SEGMENT_COLORS = ['#C5D9ED', '#7DA4CE', '#3F7BB4', '#003366']
@@ -55,6 +57,7 @@ export const DashboardPage = () => {
   const forecastWindows = getPredictedHighIntentVolume(scopedLeads)
   const campaignTrend = getCampaignTrendSeries(scopedLeads).slice(-14)
   const topLeads = [...scopedLeads].sort((left, right) => right.score - left.score).slice(0, 5)
+  const alerts = getSmartAlerts(scopedLeads)
 
   return (
     <section>
@@ -72,6 +75,8 @@ export const DashboardPage = () => {
         <KpiCard title="Conversion Rate" value={`${kpis.conversionRate}%`} trend="+2.3%" />
         <KpiCard title="Avg Lead Score" value={kpis.avgLeadScore.toString()} trend="+5 pts" />
       </div>
+
+      <SmartAlertsPanel alerts={alerts} />
 
       <div className="two-col">
         <article className="surface panel">

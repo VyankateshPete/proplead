@@ -317,6 +317,76 @@ const buildAutomation = (status: LeadStatus): Lead['automation'] => {
   }
 }
 
+const buildRoutingDecision = (lead: Pick<Lead, 'status' | 'score' | 'source'>): Lead['routing'] => {
+  if (lead.status === 'High Intent') {
+    return {
+      targetTeam: 'Sales',
+      priority: 'P1',
+      suggestedAction: 'Call lead within 15 minutes and send proposal packet',
+    }
+  }
+  if (lead.status === 'Qualified') {
+    return {
+      targetTeam: 'Sales',
+      priority: 'P2',
+      suggestedAction: 'Assign account executive and schedule consult',
+    }
+  }
+  if (lead.status === 'Nurturing') {
+    return {
+      targetTeam: 'Nurture',
+      priority: 'P2',
+      suggestedAction:
+        lead.source === 'Email'
+          ? 'Send context-aware nurture email with case study'
+          : 'Run retargeting ad + pricing explainer email',
+    }
+  }
+  return {
+    targetTeam: 'RevOps',
+    priority: 'P3',
+    suggestedAction: 'Validate lead data and continue low-intent workflow',
+  }
+}
+
+const buildQualityInsight = (
+  lead: Pick<Lead, 'behavioral' | 'score' | 'status' | 'unitSegment'>,
+): Lead['qualityInsight'] => {
+  const reasons = [
+    `${lead.behavioral.adInteractions} ad interactions`,
+    `${lead.behavioral.emailOpens} email opens`,
+    `${lead.behavioral.emailClicks} email clicks`,
+    `${lead.unitSegment} portfolio segment`,
+  ]
+
+  if (lead.score >= 85) {
+    return {
+      scoreBand: 'Excellent',
+      summary: 'Lead demonstrates strong conversion intent and high-value profile.',
+      reasons,
+    }
+  }
+  if (lead.score >= 65) {
+    return {
+      scoreBand: 'Good',
+      summary: 'Lead is qualified with solid engagement signals.',
+      reasons,
+    }
+  }
+  if (lead.score >= 45) {
+    return {
+      scoreBand: 'Medium',
+      summary: 'Lead has moderate engagement and should stay in nurture flow.',
+      reasons,
+    }
+  }
+  return {
+    scoreBand: 'Low',
+    summary: 'Lead quality is currently low and needs additional qualification signals.',
+    reasons,
+  }
+}
+
 const toConsentValue = (raw: string): boolean => raw.toLowerCase() === 'yes'
 
 const buildCompliance = (multifamilyConsent: boolean, optedOut: boolean): Lead['compliance'] => {
@@ -396,6 +466,13 @@ export const loadLeadData = async (
     const compliance = buildCompliance(multifamilyOwner, optedOut)
     const nurturing = buildNurturing(status, createdAtDate)
     const automation = buildAutomation(status)
+    const routing = buildRoutingDecision({ status, score, source })
+    const qualityInsight = buildQualityInsight({
+      behavioral,
+      score,
+      status,
+      unitSegment,
+    })
 
     const activityTime = toDisplayTime(createdAtDate)
 
@@ -422,6 +499,8 @@ export const loadLeadData = async (
       compliance,
       nurturing,
       automation,
+      routing,
+      qualityInsight,
       cdpProfile: score >= 60 || status === 'High Intent' ? matchedProfile : null,
       activityTimeline: [
         {

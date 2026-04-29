@@ -4,6 +4,7 @@ import { CampaignsPage } from './pages/CampaignsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LeadDetailPage } from './pages/LeadDetailPage'
 import { LeadsPage } from './pages/LeadsPage'
+import { SmartLabPage } from './pages/SmartLabPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="leads" element={<LeadsPage />} />
         <Route path="leads/:leadId" element={<LeadDetailPage />} />
         <Route path="campaigns" element={<CampaignsPage />} />
+        <Route path="smart-lab" element={<SmartLabPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

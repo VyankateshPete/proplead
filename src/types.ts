@@ -59,6 +59,18 @@ export interface AutomationState {
   currentAction: string
 }
 
+export interface RoutingDecision {
+  targetTeam: 'Sales' | 'Nurture' | 'RevOps'
+  priority: 'P1' | 'P2' | 'P3'
+  suggestedAction: string
+}
+
+export interface LeadQualityInsight {
+  scoreBand: 'Excellent' | 'Good' | 'Medium' | 'Low'
+  summary: string
+  reasons: string[]
+}
+
 export interface ComplianceRecord {
   tcpaConsent: boolean
   compliant: boolean
@@ -114,8 +126,27 @@ export interface Lead {
   compliance: ComplianceRecord
   nurturing: NurturingProgress
   automation: AutomationState
+  routing: RoutingDecision
+  qualityInsight: LeadQualityInsight
   cdpProfile: CDPProfile | null
   activityTimeline: LeadEvent[]
+}
+
+export interface AlertEvent {
+  id: string
+  severity: 'critical' | 'info' | 'warning'
+  title: string
+  description: string
+  action: string
+}
+
+export interface AbTestResult {
+  id: string
+  experiment: string
+  control: string
+  variant: string
+  winner: 'Control' | 'Variant'
+  liftPct: number
 }
 
 export interface CampaignRow {

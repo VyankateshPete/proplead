@@ -255,6 +255,11 @@ p {
   color: var(--status-muted-text);
 }
 
+.status-info {
+  background: var(--status-nurture-bg);
+  color: var(--status-nurture-text);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -651,6 +656,14 @@ th {
   min-height: 45vh;
   color: var(--brand-blue);
   font-weight: 600;
+}
+
+.smart-lab-banner {
+  margin-top: 0.85rem;
+}
+
+.chatbot-section {
+  margin-top: 1rem;
 }
 
 @media (max-width: 1180px) {
