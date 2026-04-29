@@ -182,6 +182,65 @@ export const getCampaignTrendSeries = (
     }))
 }
 
+export const getConversionForecast = (
+  leads: Lead[],
+): {
+  monthExpected: number
+  quarterExpected: number
+} => {
+  const expectedFromLead = (lead: Lead): number => lead.forecast.day30 / 100
+  const monthExpected = Math.round(leads.reduce((accumulator, lead) => accumulator + expectedFromLead(lead), 0))
+  const quarterExpected = Math.round(monthExpected * 2.8)
+  return { monthExpected, quarterExpected }
+}
+
+export const getCreativePerformanceRows = (
+  leads: Lead[],
+): Array<{
+  creative: string
+  source: 'Meta' | 'Email'
+  ctr: number
+  cpl: number
+  conversionRate: number
+}> => {
+  const rows = [
+    {
+      creative: 'Static Building Hero',
+      source: 'Meta' as const,
+      ctr: 1.4,
+      cpl: 13.2,
+      conversionRate: 39.8,
+    },
+    {
+      creative: 'Carousel Pricing Proof',
+      source: 'Meta' as const,
+      ctr: 2.1,
+      cpl: 11.1,
+      conversionRate: 52.4,
+    },
+    {
+      creative: 'Subject: Reduce Insurance Cost',
+      source: 'Email' as const,
+      ctr: 3.6,
+      cpl: 7.8,
+      conversionRate: 47.1,
+    },
+    {
+      creative: 'Subject: Get Multifamily Quote',
+      source: 'Email' as const,
+      ctr: 3.1,
+      cpl: 8.4,
+      conversionRate: 44.3,
+    },
+  ]
+
+  const lift = leads.length > 0 ? Number((getKpis(leads).conversionRate / 100).toFixed(2)) : 0
+  return rows.map((row) => ({
+    ...row,
+    conversionRate: Number((row.conversionRate + lift).toFixed(1)),
+  }))
+}
+
 export const getBehaviorHistory = (
   lead: Lead,
 ): Array<{

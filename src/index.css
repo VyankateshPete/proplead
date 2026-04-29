@@ -255,11 +255,6 @@ p {
   color: var(--status-muted-text);
 }
 
-.status-info {
-  background: var(--status-nurture-bg);
-  color: var(--status-nurture-text);
-}
-
 .table-wrap {
   overflow-x: auto;
 }
@@ -664,6 +659,37 @@ th {
 
 .chatbot-section {
   margin-top: 1rem;
+}
+
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.55rem;
+}
+
+.custom-report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.8rem;
+}
+
+.custom-report-card {
+  border: 1px solid #e4ebf1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #fafcfe;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.custom-report-card h3 {
+  margin: 0;
+  color: var(--brand-blue);
+  font-size: 0.94rem;
+}
+
+.report-filters {
+  margin-bottom: 1rem;
 }
 
 @media (max-width: 1180px) {

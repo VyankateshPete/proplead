@@ -33,13 +33,16 @@ export const LeadDetailPage = () => {
           </p>
           <div className="button-row">
             <button type="button" className="ghost-btn">
-              Set reminder
+              Send Nurturing Email
             </button>
             <button type="button" className="ghost-btn">
-              Send nurture
+              Assign to Sales
+            </button>
+            <button type="button" className="ghost-btn">
+              View Campaign
             </button>
             <button type="button" className="primary-btn">
-              Push to CRM
+              Add to CRM
             </button>
           </div>
         </div>
@@ -150,6 +153,27 @@ export const LeadDetailPage = () => {
       </article>
 
       <article className="panel">
+        <h2>Predictive Lead Routing</h2>
+        <dl className="definition-list">
+          <div>
+            <dt>Target team</dt>
+            <dd>{lead.routing.targetTeam}</dd>
+          </div>
+          <div>
+            <dt>Priority</dt>
+            <dd>{lead.routing.priority}</dd>
+          </div>
+          <div>
+            <dt>Recommended action</dt>
+            <dd>{lead.routing.suggestedAction}</dd>
+          </div>
+        </dl>
+        <p className="subtle">
+          Lead quality insight: {lead.qualityInsight.scoreBand} · {lead.qualityInsight.summary}
+        </p>
+      </article>
+
+      <article className="panel">
         <h2>CDP Enrichment Match</h2>
         {lead.cdpProfile ? (
           <dl className="definition-list">
@@ -193,6 +217,10 @@ export const LeadDetailPage = () => {
         ) : (
           <p className="subtle">No matching profile found for this lead.</p>
         )}
+        <p className="subtle" style={{ marginTop: '0.5rem' }}>
+          Data enrichment providers: Clearbit / ZoomInfo / LinkedIn adapter status simulated in this
+          environment.
+        </p>
       </article>
 
       <article className="panel timeline-panel">

@@ -11,12 +11,13 @@ import {
 } from 'recharts'
 import { KpiCard } from '../components/KpiCard'
 import { useAppData } from '../context/AppDataContext'
-import { getCampaignTotals, getCampaignTrendSeries } from '../utils/metrics'
+import { getCampaignTotals, getCampaignTrendSeries, getCreativePerformanceRows } from '../utils/metrics'
 
 export const CampaignsPage = () => {
   const { campaigns, leads } = useAppData()
   const totals = getCampaignTotals(campaigns)
   const trendSeries = getCampaignTrendSeries(leads).slice(-14)
+  const creativeRows = getCreativePerformanceRows(leads)
   const comparisonRows = campaigns.map((campaign) => ({
     source: campaign.source,
     cpl: campaign.cpl,
@@ -117,6 +118,35 @@ export const CampaignsPage = () => {
               <Bar dataKey="leads" fill="#7DA4CE" name="Leads" />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </article>
+
+      <article className="surface panel" style={{ marginTop: '1rem' }}>
+        <h2 className="panel-title">Creative and Subject Line Performance</h2>
+        <p className="panel-subtitle">Granular performance across ad creatives and email subject lines</p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Creative / Subject</th>
+                <th>Source</th>
+                <th>CTR</th>
+                <th>CPL</th>
+                <th>Conv. %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {creativeRows.map((row) => (
+                <tr key={`${row.source}-${row.creative}`}>
+                  <td>{row.creative}</td>
+                  <td>{row.source}</td>
+                  <td>{row.ctr}%</td>
+                  <td>${row.cpl}</td>
+                  <td>{row.conversionRate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </article>
     </section>

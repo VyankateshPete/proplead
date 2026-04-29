@@ -96,11 +96,33 @@ export interface ScoringConfig {
 }
 
 export interface IntegrationConnection {
-  key: 'salesforce' | 'hubspot' | 'meta' | 'mailchimp' | 'activecampaign'
+  key:
+    | 'salesforce'
+    | 'hubspot'
+    | 'zoho'
+    | 'pipedrive'
+    | 'meta'
+    | 'mailchimp'
+    | 'activecampaign'
+    | 'clearbit'
+    | 'zoominfo'
+    | 'linkedin'
   label: string
   connected: boolean
   statusText: string
   lastSyncAt: string
+  category: 'CRM' | 'Advertising' | 'Email' | 'Enrichment'
+}
+
+export interface DashboardPreferences {
+  showAlerts: boolean
+  showLeadVolume: boolean
+  showSourceBreakdown: boolean
+  showSegments: boolean
+  showTopLeads: boolean
+  showForecast: boolean
+  showCampaignVisualization: boolean
+  showConversionProjection: boolean
 }
 
 export interface Lead {

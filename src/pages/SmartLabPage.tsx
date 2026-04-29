@@ -16,15 +16,19 @@ export const SmartLabPage = () => {
   )
   const [engagementInput, setEngagementInput] = useState<number>(7)
   const [sourceInput, setSourceInput] = useState<'Meta' | 'Email'>('Meta')
+  const [coverageInput, setCoverageInput] = useState<'Basic' | 'Standard' | 'Premium'>('Standard')
+  const [budgetInput, setBudgetInput] = useState<number>(1200)
 
   const alerts = useMemo(() => getSmartAlerts(leads), [leads])
   const abResults = useMemo(() => getAbTestResults(leads), [leads])
 
   const chatbotResult = useMemo(() => {
     const units = unitToCount(unitsInput)
+    const coverageBoost = coverageInput === 'Premium' ? 10 : coverageInput === 'Standard' ? 6 : 2
+    const budgetBoost = Math.min(12, Math.round(budgetInput / 400))
     const score = Math.min(
       100,
-      Math.round(units * 2.2 + engagementInput * 5 + (sourceInput === 'Meta' ? 8 : 4)),
+      Math.round(units * 2.2 + engagementInput * 5 + (sourceInput === 'Meta' ? 8 : 4) + coverageBoost + budgetBoost),
     )
     const classification = score >= 80 ? 'High Intent' : score >= 60 ? 'Qualified' : 'Nurturing'
     const nextAction =
@@ -35,7 +39,7 @@ export const SmartLabPage = () => {
           : 'Enroll into context-aware nurture sequence'
 
     return { score, classification, nextAction }
-  }, [unitsInput, engagementInput, sourceInput])
+  }, [unitsInput, engagementInput, sourceInput, coverageInput, budgetInput])
 
   return (
     <section>
@@ -129,6 +133,26 @@ export const SmartLabPage = () => {
             <option value="Meta">Meta</option>
             <option value="Email">Email</option>
           </select>
+          <label className="kv-key">Current coverage</label>
+          <select
+            className="input"
+            value={coverageInput}
+            onChange={(event) => setCoverageInput(event.target.value as 'Basic' | 'Standard' | 'Premium')}
+          >
+            <option value="Basic">Basic</option>
+            <option value="Standard">Standard</option>
+            <option value="Premium">Premium</option>
+          </select>
+          <label className="kv-key">Monthly budget ($)</label>
+          <input
+            className="input"
+            type="number"
+            min={200}
+            max={8000}
+            step={50}
+            value={budgetInput}
+            onChange={(event) => setBudgetInput(Number(event.target.value))}
+          />
         </div>
         <div className="metric-stack">
           <div className="metric-tile">

@@ -33,6 +33,7 @@ export const SettingsPage = () => {
         connected: true,
         statusText: 'Connected',
         lastSyncAt: '2m ago',
+        category: 'CRM',
       },
       {
         key: 'hubspot',
@@ -40,6 +41,7 @@ export const SettingsPage = () => {
         connected: false,
         statusText: 'Not connected',
         lastSyncAt: 'Never',
+        category: 'CRM',
       },
       {
         key: 'meta',
@@ -47,6 +49,7 @@ export const SettingsPage = () => {
         connected: true,
         statusText: 'Connected',
         lastSyncAt: '5m ago',
+        category: 'Advertising',
       },
       {
         key: 'mailchimp',
@@ -54,6 +57,7 @@ export const SettingsPage = () => {
         connected: true,
         statusText: 'Connected',
         lastSyncAt: '4m ago',
+        category: 'Email',
       },
       {
         key: 'activecampaign',
@@ -61,6 +65,47 @@ export const SettingsPage = () => {
         connected: false,
         statusText: 'Optional',
         lastSyncAt: 'Never',
+        category: 'Email',
+      },
+      {
+        key: 'zoho',
+        label: 'Zoho CRM',
+        connected: false,
+        statusText: 'Optional',
+        lastSyncAt: 'Never',
+        category: 'CRM',
+      },
+      {
+        key: 'pipedrive',
+        label: 'Pipedrive',
+        connected: false,
+        statusText: 'Optional',
+        lastSyncAt: 'Never',
+        category: 'CRM',
+      },
+      {
+        key: 'clearbit',
+        label: 'Clearbit',
+        connected: true,
+        statusText: 'Connected',
+        lastSyncAt: '6m ago',
+        category: 'Enrichment',
+      },
+      {
+        key: 'zoominfo',
+        label: 'ZoomInfo',
+        connected: false,
+        statusText: 'Onboarding',
+        lastSyncAt: 'Pending',
+        category: 'Enrichment',
+      },
+      {
+        key: 'linkedin',
+        label: 'LinkedIn Enrichment',
+        connected: true,
+        statusText: 'Connected',
+        lastSyncAt: '8m ago',
+        category: 'Enrichment',
       },
     ],
     [],
@@ -250,18 +295,23 @@ export const SettingsPage = () => {
               <span className="kv-key">TCPA import validation</span>
               <span className="status-badge status-success">Strict</span>
             </div>
+            <div className="kv-row">
+              <span className="kv-key">Custom report scheduling</span>
+              <span className="status-badge status-info">Enabled</span>
+            </div>
           </div>
         </article>
       </div>
 
       <article className="surface panel" style={{ marginTop: '1rem' }}>
         <h2 className="panel-title">Integrations</h2>
-        <p className="panel-subtitle">Meta Lead Gen + Email platform sync status</p>
+        <p className="panel-subtitle">CRM, ad platform, email, and enrichment sync status</p>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Platform</th>
+                <th>Category</th>
                 <th>Status</th>
                 <th>Last Sync</th>
                 <th>Action</th>
@@ -271,6 +321,7 @@ export const SettingsPage = () => {
               {integrations.map((integration) => (
                 <tr key={integration.key}>
                   <td>{integration.label}</td>
+                  <td>{integration.category}</td>
                   <td>
                     <span
                       className={`status-badge ${integration.connected ? 'status-success' : 'status-warning'}`}
