@@ -4,13 +4,16 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { AppDataProvider } from './context/AppDataContext'
+import { ScoringConfigProvider } from './context/ScoringConfigContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <AppDataProvider>
-        <App />
-      </AppDataProvider>
+      <ScoringConfigProvider>
+        <AppDataProvider>
+          <App />
+        </AppDataProvider>
+      </ScoringConfigProvider>
     </BrowserRouter>
   </StrictMode>,
 )

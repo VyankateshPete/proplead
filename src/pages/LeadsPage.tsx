@@ -5,6 +5,19 @@ import { LeadRowCard } from '../components/LeadRowCard'
 import { useAppData } from '../context/AppDataContext'
 import type { DateRangeFilter, LeadSource, LeadStatus } from '../types'
 import { filterByRange, getReferenceDate } from '../utils/filters'
+import { exportLeadsToCsv } from '../lib/leadData'
+
+const downloadCsv = (filename: string, csvText: string): void => {
+  const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
 
 export const LeadsPage = () => {
   const { leads, loading, error } = useAppData()
@@ -79,8 +92,12 @@ export const LeadsPage = () => {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <button type="button" className="btn">
-          Export
+        <button
+          type="button"
+          className="btn"
+          onClick={() => downloadCsv('proplead-export.csv', exportLeadsToCsv(filteredLeads))}
+        >
+          Export CSV
         </button>
         <button type="button" className="btn btn-primary">
           Push qualified to CRM
@@ -107,6 +124,7 @@ export const LeadsPage = () => {
                   <th>Score</th>
                   <th>Status</th>
                   <th>Source</th>
+                  <th>TCPA</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -119,6 +137,7 @@ export const LeadsPage = () => {
                     <td>{lead.score}</td>
                     <td>{lead.status}</td>
                     <td>{lead.source.replace('Meta - ', 'Meta ')}</td>
+                    <td>{lead.compliance.compliant ? 'Compliant' : 'Review'}</td>
                     <td>
                       <Link to={`/leads/${encodeURIComponent(lead.id)}`}>View →</Link>
                     </td>

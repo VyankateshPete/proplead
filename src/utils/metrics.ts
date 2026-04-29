@@ -1,4 +1,11 @@
-import type { CampaignRow, DashboardKpis, Lead, LeadStatus, UnitSegment } from '../types'
+import type {
+  CampaignRow,
+  DashboardKpis,
+  GranularUnitSegment,
+  Lead,
+  LeadStatus,
+  UnitSegment,
+} from '../types'
 
 export const getDisplayName = (lead: Lead): string => `${lead.firstName} ${lead.lastName}`.trim()
 
@@ -97,3 +104,92 @@ export const getCampaignTotals = (
     active: campaigns.length,
   }
 }
+
+export const getGranularSegments = (
+  leads: Lead[],
+): {
+  segment: GranularUnitSegment
+  leads: number
+  highIntentRate: number
+}[] => {
+  const order: GranularUnitSegment[] = ['1-5 units', '6-10 units', '11-20 units', '20+ units']
+
+  return order.map((segment) => {
+    const scoped = leads.filter((lead) => lead.granularSegment === segment)
+    const highIntentCount = scoped.filter((lead) => lead.status === 'High Intent').length
+    return {
+      segment,
+      leads: scoped.length,
+      highIntentRate: scoped.length === 0 ? 0 : Number(((highIntentCount / scoped.length) * 100).toFixed(1)),
+    }
+  })
+}
+
+export const getPredictedHighIntentVolume = (
+  leads: Lead[],
+): {
+  window: '7 days' | '14 days' | '30 days'
+  predicted: number
+}[] => {
+  const windows: Array<{ key: keyof Lead['forecast']; label: '7 days' | '14 days' | '30 days' }> = [
+    { key: 'day7', label: '7 days' },
+    { key: 'day14', label: '14 days' },
+    { key: 'day30', label: '30 days' },
+  ]
+
+  return windows.map(({ key, label }) => {
+    const predicted = leads.reduce((accumulator, lead) => accumulator + lead.forecast[key] / 100, 0)
+    return {
+      window: label,
+      predicted: Math.round(predicted),
+    }
+  })
+}
+
+export const getCampaignTrendSeries = (
+  leads: Lead[],
+): Array<{
+  day: string
+  leadVolume: number
+  conversionRate: number
+}> => {
+  const grouped = new Map<
+    string,
+    {
+      total: number
+      converted: number
+      label: string
+    }
+  >()
+
+  for (const lead of leads) {
+    const isoDay = lead.createdAt.slice(0, 10)
+    const label = new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const existing = grouped.get(isoDay) ?? { total: 0, converted: 0, label }
+    existing.total += 1
+    if (lead.status === 'Qualified' || lead.status === 'High Intent') {
+      existing.converted += 1
+    }
+    grouped.set(isoDay, existing)
+  }
+
+  return Array.from(grouped.entries())
+    .sort(([left], [right]) => (left > right ? 1 : -1))
+    .map(([, value]) => ({
+      day: value.label,
+      leadVolume: value.total,
+      conversionRate: value.total === 0 ? 0 : Number(((value.converted / value.total) * 100).toFixed(1)),
+    }))
+}
+
+export const getBehaviorHistory = (
+  lead: Lead,
+): Array<{
+  label: string
+  value: number
+}> => [
+  { label: 'Email opens', value: lead.behavioral.emailOpens },
+  { label: 'Email clicks', value: lead.behavioral.emailClicks },
+  { label: 'Ad interactions', value: lead.behavioral.adInteractions },
+  { label: 'Form submissions', value: lead.behavioral.formSubmissions },
+]

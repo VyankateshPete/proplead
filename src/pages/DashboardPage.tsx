@@ -3,6 +3,8 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Legend,
   Pie,
   PieChart,
@@ -18,7 +20,15 @@ import { KpiCard } from '../components/KpiCard'
 import { FilterTabs } from '../components/FilterTabs'
 import { StatusBadge } from '../components/StatusBadge'
 import { filterByRange, getReferenceDate } from '../utils/filters'
-import { getInitials, getKpis, getLeadVolume, getSegments, getSourceBreakdown } from '../utils/metrics'
+import {
+  getCampaignTrendSeries,
+  getGranularSegments,
+  getInitials,
+  getKpis,
+  getLeadVolume,
+  getPredictedHighIntentVolume,
+  getSourceBreakdown,
+} from '../utils/metrics'
 import type { DateRangeFilter } from '../types'
 
 const PIE_COLORS = ['#003366', '#00A651', '#8da8c5']
@@ -41,7 +51,9 @@ export const DashboardPage = () => {
   const kpis = getKpis(scopedLeads)
   const sourceBreakdown = getSourceBreakdown(scopedLeads)
   const volume = getLeadVolume(scopedLeads).slice(-14)
-  const segments = getSegments(scopedLeads)
+  const granularSegments = getGranularSegments(scopedLeads)
+  const forecastWindows = getPredictedHighIntentVolume(scopedLeads)
+  const campaignTrend = getCampaignTrendSeries(scopedLeads).slice(-14)
   const topLeads = [...scopedLeads].sort((left, right) => right.score - left.score).slice(0, 5)
 
   return (
@@ -108,10 +120,10 @@ export const DashboardPage = () => {
 
       <div className="two-col">
         <article className="surface panel">
-          <h2>Multifamily Segments</h2>
-          <p className="panel-subtitle">Pricing tiers (informational only)</p>
+          <h2>Granular Lead Segment Breakdown</h2>
+          <p className="panel-subtitle">1-5, 6-10, 11-20, and 20+ performance tiers</p>
           <ul className="segment-list">
-            {segments.map((segment, index) => (
+            {granularSegments.map((segment, index) => (
               <li key={segment.segment}>
                 <div className="segment-label">
                   <span
@@ -122,7 +134,10 @@ export const DashboardPage = () => {
                   />
                   {segment.segment}
                 </div>
-                <strong>{segment.leads}</strong>
+                <div style={{ display: 'grid', textAlign: 'right' }}>
+                  <strong>{segment.leads}</strong>
+                  <small className="kv-key">{segment.highIntentRate}% high intent</small>
+                </div>
               </li>
             ))}
           </ul>
@@ -130,7 +145,7 @@ export const DashboardPage = () => {
 
         <article className="surface panel">
           <h2>Recent High-Value Leads</h2>
-          <p className="panel-subtitle">Top scoring leads in the last 24h</p>
+          <p className="panel-subtitle">Top scoring leads with conversion forecasts</p>
           <ul className="lead-highlight-list">
             {topLeads.map((lead) => (
               <li key={lead.id}>
@@ -146,9 +161,66 @@ export const DashboardPage = () => {
                 </div>
                 <strong>{lead.score}</strong>
                 <StatusBadge status={lead.status} />
+                <small className="kv-key">7d {lead.forecast.day7}%</small>
               </li>
             ))}
           </ul>
+        </article>
+      </div>
+
+      <div className="two-col">
+        <article className="surface panel">
+          <h2>Predictive Forecast</h2>
+          <p className="panel-subtitle">Expected high-intent volume over 7/14/30 days</p>
+          <div className="metric-stack">
+            {forecastWindows.map((window) => (
+              <div className="metric-tile" key={window.window}>
+                <p className="kv-key">{window.window}</p>
+                <p className="metric-value">{window.predicted}</p>
+                <p className="subtle">predicted high-intent leads</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="surface panel">
+          <h2>Campaign Performance Visualization</h2>
+          <p className="panel-subtitle">Lead volume and conversion trend over time</p>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={campaignTrend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#d9e2ec" />
+                <XAxis dataKey="day" tick={{ fill: '#4B4B4B', fontSize: 12 }} />
+                <YAxis yAxisId="left" allowDecimals={false} tick={{ fill: '#4B4B4B', fontSize: 12 }} />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fill: '#4B4B4B', fontSize: 12 }}
+                  domain={[0, 100]}
+                />
+                <Tooltip />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="leadVolume"
+                  name="Lead volume"
+                  stroke="#003366"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="conversionRate"
+                  name="Conversion rate %"
+                  stroke="#00A651"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </article>
       </div>
     </section>

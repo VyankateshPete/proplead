@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { loadLeadData } from '../lib/leadData'
 import type { CampaignRow, Lead } from '../types'
+import { useScoringConfig } from './ScoringConfigContext'
 
 interface AppDataContextValue {
   leads: Lead[]
@@ -12,6 +13,7 @@ interface AppDataContextValue {
 const AppDataContext = createContext<AppDataContextValue | null>(null)
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
+  const { scoringConfig } = useScoringConfig()
   const [leads, setLeads] = useState<Lead[]>([])
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,7 +23,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const payload = await loadLeadData()
+        setError(null)
+        const payload = await loadLeadData(scoringConfig)
         setLeads(payload.leads)
         setCampaigns(payload.campaigns)
       } catch (caughtError) {
@@ -32,7 +35,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     }
 
     void fetchData()
-  }, [])
+  }, [scoringConfig])
 
   const value = useMemo(() => ({ leads, campaigns, loading, error }), [campaigns, error, leads, loading])
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

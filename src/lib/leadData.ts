@@ -1,5 +1,15 @@
 import Papa from 'papaparse'
-import type { CampaignRow, CDPProfile, Lead, LeadSource, LeadStatus, UnitSegment } from '../types'
+import { DEFAULT_SCORING_CONFIG } from '../config/defaultScoringConfig'
+import type {
+  CampaignRow,
+  CDPProfile,
+  GranularUnitSegment,
+  Lead,
+  LeadSource,
+  LeadStatus,
+  ScoringConfig,
+  UnitSegment,
+} from '../types'
 
 const META_CSV_PATH = '/data/meta_leads.csv'
 const CDP_CSV_PATH = '/data/internal_cdp_sample_data.csv'
@@ -17,6 +27,17 @@ const UNIT_BASE_SCORES: Record<UnitSegment, number> = {
   '51-100 units': 84,
   '100+ units': 94,
 }
+
+const GRANULAR_SEGMENT_BOUNDS: Array<{
+  label: GranularUnitSegment
+  min: number
+  max?: number
+}> = [
+  { label: '1-5 units', min: 1, max: 5 },
+  { label: '6-10 units', min: 6, max: 10 },
+  { label: '11-20 units', min: 11, max: 20 },
+  { label: '20+ units', min: 21 },
+]
 
 const SOURCE_CONFIG: Record<
   LeadSource,
@@ -74,6 +95,21 @@ const normalizePhone = (phoneValue: string): string => phoneValue.replace(/^p:/,
 
 const normalizeZip = (zipValue: string): string => zipValue.replace(/^z:/, '').trim()
 
+const toUnitCount = (segment: UnitSegment): number => {
+  if (segment === '1-10 units') return 8
+  if (segment === '11-50 units') return 26
+  if (segment === '51-100 units') return 72
+  return 120
+}
+
+const toGranularSegment = (unitCount: number): GranularUnitSegment => {
+  const match = GRANULAR_SEGMENT_BOUNDS.find((bound) => {
+    if (bound.max === undefined) return unitCount >= bound.min
+    return unitCount >= bound.min && unitCount <= bound.max
+  })
+  return match?.label ?? '20+ units'
+}
+
 const parseDate = (value: string): Date => {
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) {
@@ -113,22 +149,55 @@ const buildCdpProfiles = (rows: Record<string, string>[]): CDPProfile[] => {
   return Array.from(byUuid.values())
 }
 
+const buildBehavioralSignals = (
+  leadId: string,
+  source: LeadSource,
+  createdAtDate: Date,
+): Lead['behavioral'] => {
+  const baseSeed = hashString(leadId)
+  const emailOpens = baseSeed % 5
+  const emailClicks = Math.round(emailOpens * 0.6) + (source === 'Meta - Instagram' ? 1 : 0)
+  const adInteractions = (baseSeed % 4) + (source === 'Meta - Facebook' ? 2 : 1)
+  const formSubmissions = 1
+  const lastEngagedAt = new Date(createdAtDate.getTime() + ((baseSeed % 9) + 1) * 3_600_000).toISOString()
+
+  return {
+    emailOpens,
+    emailClicks,
+    adInteractions,
+    formSubmissions,
+    lastEngagedAt,
+  }
+}
+
 const getScore = (
   leadId: string,
   source: LeadSource,
   unitSegment: UnitSegment,
+  behavioral: Lead['behavioral'],
   multifamilyOwner: boolean,
   createdAt: Date,
   newestDate: Date,
+  scoring: ScoringConfig,
 ): number => {
   const variability = (hashString(leadId) % 7) - 3
-  const platformBonus = source === 'Meta - Instagram' ? 1 : 0
   const ownerAdjustment = multifamilyOwner ? 4 : -6
   const dayDiff = Math.max(0, (newestDate.getTime() - createdAt.getTime()) / 86_400_000)
   const recencyBonus = Math.max(0, 4 - dayDiff * 0.2)
 
-  const rawScore =
-    UNIT_BASE_SCORES[unitSegment] + ownerAdjustment + platformBonus + variability + recencyBonus
+  const engagementRaw =
+    behavioral.emailOpens * scoring.engagementWeights.emailOpens +
+    behavioral.emailClicks * scoring.engagementWeights.emailClicks +
+    behavioral.adInteractions * scoring.engagementWeights.adInteractions +
+    behavioral.formSubmissions * scoring.engagementWeights.formSubmissions
+
+  const behavioralScore = (engagementRaw / 200) * scoring.behavioralWeight
+  const demographicScore =
+    ((UNIT_BASE_SCORES[unitSegment] + ownerAdjustment + variability + recencyBonus) / 100) *
+    scoring.demographicWeight
+  const sourceWeight = source === 'Email' ? scoring.sourceWeights.email : scoring.sourceWeights.meta
+
+  const rawScore = behavioralScore + demographicScore + sourceWeight * 0.15
 
   return toNumberInRange(Math.round(rawScore), 20, 100)
 }
@@ -139,12 +208,17 @@ const getForecast = (score: number): Lead['forecast'] => ({
   day30: toNumberInRange(Math.round(score - 4), 18, 99),
 })
 
-const getStatus = (score: number, multifamilyOwner: boolean, optedOut: boolean): LeadStatus => {
+const getStatus = (
+  score: number,
+  multifamilyOwner: boolean,
+  optedOut: boolean,
+  scoring: ScoringConfig,
+): LeadStatus => {
   if (optedOut) return 'Opted Out'
-  if (!multifamilyOwner && score < 35) return 'Low Intent'
-  if (score >= 90) return 'High Intent'
-  if (score >= 65) return 'Qualified'
-  if (score >= 40) return 'Nurturing'
+  if (!multifamilyOwner && score < scoring.nurturingThreshold - 5) return 'Low Intent'
+  if (score >= scoring.highIntentThreshold) return 'High Intent'
+  if (score >= scoring.qualifiedThreshold) return 'Qualified'
+  if (score >= scoring.nurturingThreshold) return 'Nurturing'
   return 'Low Intent'
 }
 
@@ -185,7 +259,105 @@ const toCampaignRows = (leads: Lead[]): CampaignRow[] => {
   })
 }
 
-export const loadLeadData = async (): Promise<{ leads: Lead[]; campaigns: CampaignRow[] }> => {
+const buildNurturing = (status: LeadStatus, createdAtDate: Date): Lead['nurturing'] => {
+  if (status !== 'Low Intent' && status !== 'Nurturing') {
+    return {
+      enrolled: false,
+      stage: 'Not Enrolled',
+      progressPct: 0,
+      nextStep: 'No active nurturing sequence',
+      nextTouchAt: createdAtDate.toISOString(),
+    }
+  }
+
+  const nowish = createdAtDate.getTime()
+  const stageCycle: Lead['nurturing']['stage'][] = ['Intro Email', 'Education Sequence', 'Retargeting']
+  const stage = stageCycle[hashString(createdAtDate.toISOString()) % stageCycle.length]
+  const progressByStage: Record<Lead['nurturing']['stage'], number> = {
+    'Not Enrolled': 0,
+    'Intro Email': 25,
+    'Education Sequence': 60,
+    Retargeting: 85,
+    'Sales Ready': 100,
+  }
+
+  return {
+    enrolled: true,
+    stage,
+    progressPct: progressByStage[stage],
+    nextStep:
+      stage === 'Intro Email'
+        ? 'Send case-study email'
+        : stage === 'Education Sequence'
+          ? 'Schedule webinar nurture'
+          : 'Launch retargeting ad set',
+    nextTouchAt: new Date(nowish + 24 * 3_600_000).toISOString(),
+  }
+}
+
+const buildAutomation = (status: LeadStatus): Lead['automation'] => {
+  if (status === 'High Intent') {
+    return {
+      salesNotificationQueued: true,
+      crmAutoPush: true,
+      currentAction: 'Auto-push to Salesforce queue',
+    }
+  }
+  if (status === 'Qualified') {
+    return {
+      salesNotificationQueued: true,
+      crmAutoPush: false,
+      currentAction: 'Notify sales rep for manual qualification',
+    }
+  }
+  return {
+    salesNotificationQueued: false,
+    crmAutoPush: false,
+    currentAction: 'Nurture sequence automation',
+  }
+}
+
+const toConsentValue = (raw: string): boolean => raw.toLowerCase() === 'yes'
+
+const buildCompliance = (multifamilyConsent: boolean, optedOut: boolean): Lead['compliance'] => {
+  const issues: string[] = []
+  if (!multifamilyConsent) {
+    issues.push('Missing explicit multifamily confirmation in lead form')
+  }
+  if (optedOut) {
+    issues.push('Lead is opted out from outreach')
+  }
+  return {
+    tcpaConsent: multifamilyConsent,
+    compliant: issues.length === 0,
+    issues,
+  }
+}
+
+export const exportLeadsToCsv = (leads: Lead[]): string =>
+  Papa.unparse(
+    leads.map((lead) => ({
+      id: lead.id,
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      source: lead.source,
+      status: lead.status,
+      score: lead.score,
+      unitSegment: lead.unitSegment,
+      granularSegment: lead.granularSegment,
+      unitCount: lead.unitCount,
+      compliant: lead.compliance.compliant ? 'yes' : 'no',
+      nurturingStage: lead.nurturing.stage,
+      forecast7d: lead.forecast.day7,
+      forecast14d: lead.forecast.day14,
+      forecast30d: lead.forecast.day30,
+    })),
+  )
+
+export const loadLeadData = async (
+  scoring: ScoringConfig = DEFAULT_SCORING_CONFIG,
+): Promise<{ leads: Lead[]; campaigns: CampaignRow[] }> => {
   const [metaRows, cdpRows] = await Promise.all([parseCsv(META_CSV_PATH), parseCsv(CDP_CSV_PATH)])
   const cdpProfiles = buildCdpProfiles(cdpRows)
 
@@ -199,15 +371,31 @@ export const loadLeadData = async (): Promise<{ leads: Lead[]; campaigns: Campai
     const id = row.id
     const createdAtDate = parseDate(row.created_time)
     const createdAt = createdAtDate.toISOString()
-    const multifamilyOwner =
-      row['do_you_have_a_multifamily_unit_with_4+_rental_properties?']?.toLowerCase() === 'yes'
+    const multifamilyOwner = toConsentValue(
+      row['do_you_have_a_multifamily_unit_with_4+_rental_properties?'] ?? '',
+    )
     const source = formatSource(row.platform ?? '')
     const unitSegment = formatUnits(row['how_many_total_units_do_you_have_across_your_properties?'])
-    const score = getScore(id, source, unitSegment, multifamilyOwner, createdAtDate, newestDate)
-    const optedOut = false
-    const status = getStatus(score, multifamilyOwner, optedOut)
+    const behavioral = buildBehavioralSignals(id, source, createdAtDate)
+    const score = getScore(
+      id,
+      source,
+      unitSegment,
+      behavioral,
+      multifamilyOwner,
+      createdAtDate,
+      newestDate,
+      scoring,
+    )
+    const optedOut = hashString(id) % 29 === 0
+    const status = getStatus(score, multifamilyOwner, optedOut, scoring)
     const profileIndex = hashString(`${id}-${row.email}`) % cdpProfiles.length
     const matchedProfile = cdpProfiles[profileIndex] ?? null
+    const unitCount = toUnitCount(unitSegment)
+    const granularSegment = toGranularSegment(unitCount)
+    const compliance = buildCompliance(multifamilyOwner, optedOut)
+    const nurturing = buildNurturing(status, createdAtDate)
+    const automation = buildAutomation(status)
 
     const activityTime = toDisplayTime(createdAtDate)
 
@@ -222,12 +410,18 @@ export const loadLeadData = async (): Promise<{ leads: Lead[]; campaigns: Campai
       source,
       campaignName: row.campaign_name ?? 'Unknown campaign',
       unitSegment,
+      granularSegment,
+      unitCount,
       multifamilyOwner,
+      behavioral,
       score,
       status,
       forecast: getForecast(score),
       tcpaConsentVerified: multifamilyOwner,
       optedOut,
+      compliance,
+      nurturing,
+      automation,
       cdpProfile: score >= 60 || status === 'High Intent' ? matchedProfile : null,
       activityTimeline: [
         {
@@ -251,6 +445,11 @@ export const loadLeadData = async (): Promise<{ leads: Lead[]; campaigns: Campai
             ? `Matched CDP profile · ${matchedProfile.jobTitle} at ${matchedProfile.company}`
             : 'No CDP profile matched',
           timestamp: activityTime,
+        },
+        {
+          id: `${id}-5`,
+          label: `Behavioral engagement · ${behavioral.emailOpens} opens, ${behavioral.emailClicks} clicks, ${behavioral.adInteractions} ad interactions`,
+          timestamp: toDisplayTime(new Date(behavioral.lastEngagedAt)),
         },
       ],
     } satisfies Lead

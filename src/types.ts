@@ -10,6 +10,7 @@ export type LeadStatus =
 export type LeadSource = 'Meta - Facebook' | 'Meta - Instagram' | 'Email'
 
 export type UnitSegment = '1-10 units' | '11-50 units' | '51-100 units' | '100+ units'
+export type GranularUnitSegment = '1-5 units' | '6-10 units' | '11-20 units' | '20+ units'
 
 export interface CDPProfile {
   fullName: string
@@ -36,6 +37,60 @@ export interface LeadForecast {
   day30: number
 }
 
+export interface BehavioralMetrics {
+  emailOpens: number
+  emailClicks: number
+  adInteractions: number
+  formSubmissions: number
+  lastEngagedAt: string
+}
+
+export interface NurturingProgress {
+  enrolled: boolean
+  stage: 'Not Enrolled' | 'Intro Email' | 'Education Sequence' | 'Retargeting' | 'Sales Ready'
+  progressPct: number
+  nextStep: string
+  nextTouchAt: string
+}
+
+export interface AutomationState {
+  salesNotificationQueued: boolean
+  crmAutoPush: boolean
+  currentAction: string
+}
+
+export interface ComplianceRecord {
+  tcpaConsent: boolean
+  compliant: boolean
+  issues: string[]
+}
+
+export interface ScoringConfig {
+  behavioralWeight: number
+  demographicWeight: number
+  highIntentThreshold: number
+  qualifiedThreshold: number
+  nurturingThreshold: number
+  sourceWeights: {
+    meta: number
+    email: number
+  }
+  engagementWeights: {
+    emailOpens: number
+    emailClicks: number
+    adInteractions: number
+    formSubmissions: number
+  }
+}
+
+export interface IntegrationConnection {
+  key: 'salesforce' | 'hubspot' | 'meta' | 'mailchimp' | 'activecampaign'
+  label: string
+  connected: boolean
+  statusText: string
+  lastSyncAt: string
+}
+
 export interface Lead {
   id: string
   createdAt: string
@@ -47,12 +102,18 @@ export interface Lead {
   source: LeadSource
   campaignName: string
   unitSegment: UnitSegment
+  granularSegment: GranularUnitSegment
+  unitCount: number
   multifamilyOwner: boolean
+  behavioral: BehavioralMetrics
   score: number
   status: LeadStatus
   forecast: LeadForecast
   tcpaConsentVerified: boolean
   optedOut: boolean
+  compliance: ComplianceRecord
+  nurturing: NurturingProgress
+  automation: AutomationState
   cdpProfile: CDPProfile | null
   activityTimeline: LeadEvent[]
 }

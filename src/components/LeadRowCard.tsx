@@ -20,9 +20,11 @@ export const LeadRowCard = ({ lead }: LeadRowCardProps) => {
       <div className="lead-meta">
         <p>{lead.unitSegment}</p>
         <small>{lead.multifamilyOwner ? 'MF confirmed' : 'Not MF'}</small>
+        <small>{lead.nurturing.enrolled ? `Nurture: ${lead.nurturing.stage}` : 'No nurture'}</small>
       </div>
       <div className="lead-score">{lead.score}</div>
       <StatusBadge status={lead.status} />
+      {!lead.compliance.compliant && <span className="status-badge status-warning">Compliance Flag</span>}
       <Link to={`/leads/${encodeURIComponent(lead.id)}`} className="link-button">
         View
       </Link>

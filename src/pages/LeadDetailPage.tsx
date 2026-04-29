@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAppData } from '../context/AppDataContext'
-import { getDisplayName } from '../utils/metrics'
+import { getBehaviorHistory, getDisplayName } from '../utils/metrics'
 import { StatusBadge } from '../components/StatusBadge'
 
 export const LeadDetailPage = () => {
@@ -19,6 +19,8 @@ export const LeadDetailPage = () => {
       </section>
     )
   }
+
+  const behavioralHistory = getBehaviorHistory(lead)
 
   return (
     <section className="page-grid lead-detail-grid">
@@ -78,13 +80,35 @@ export const LeadDetailPage = () => {
             <dt>TCPA consent</dt>
             <dd>{lead.tcpaConsentVerified ? '✓ Verified' : 'Not verified'}</dd>
           </div>
+          <div>
+            <dt>Compliance</dt>
+            <dd>{lead.compliance.compliant ? 'Compliant' : 'Needs review'}</dd>
+          </div>
         </dl>
+        {!lead.compliance.compliant && (
+          <p className="subtle">Compliance issues: {lead.compliance.issues.join('; ')}</p>
+        )}
       </article>
 
       <article className="surface panel">
         <h2>Lead Score</h2>
         <p className="score-big">{lead.score}/100</p>
         <StatusBadge status={lead.status} />
+      </article>
+
+      <article className="panel">
+        <h2>Behavioral History</h2>
+        <div className="metric-stack">
+          {behavioralHistory.map((metric) => (
+            <div className="metric-tile" key={metric.label}>
+              <p className="kv-key">{metric.label}</p>
+              <p className="metric-value">{metric.value}</p>
+            </div>
+          ))}
+        </div>
+        <p className="subtle">
+          Last engagement: {new Date(lead.behavioral.lastEngagedAt).toLocaleString('en-US')}
+        </p>
       </article>
 
       <article className="panel">
@@ -105,6 +129,23 @@ export const LeadDetailPage = () => {
             <span>30 days</span>
             <strong>{lead.forecast.day30}%</strong>
           </div>
+        </div>
+      </article>
+
+      <article className="panel">
+        <h2>Nurturing Automation</h2>
+        <p className="subtle">
+          {lead.nurturing.enrolled
+            ? `Enrolled · ${lead.nurturing.stage}`
+            : 'Not enrolled in a nurture sequence'}
+        </p>
+        <div className="metric-tile" style={{ marginTop: '0.6rem' }}>
+          <p className="kv-key">Progress</p>
+          <p className="metric-value">{lead.nurturing.progressPct}%</p>
+          <p className="subtle">Next step: {lead.nurturing.nextStep}</p>
+          <p className="subtle">
+            Next touch: {new Date(lead.nurturing.nextTouchAt).toLocaleString('en-US')}
+          </p>
         </div>
       </article>
 
@@ -179,6 +220,11 @@ export const LeadDetailPage = () => {
             HubSpot
           </button>
         </div>
+        <p className="subtle">
+          Automation: {lead.automation.currentAction}
+          {lead.automation.salesNotificationQueued ? ' · Sales notification queued' : ''}
+          {lead.automation.crmAutoPush ? ' · CRM auto-push enabled' : ''}
+        </p>
       </article>
     </section>
   )
