@@ -21,10 +21,14 @@ export const LeadRowCard = ({ lead }: LeadRowCardProps) => {
         <p>{lead.unitSegment}</p>
         <small>{lead.multifamilyOwner ? 'MF confirmed' : 'Not MF'}</small>
         <small>{lead.nurturing.enrolled ? `Nurture: ${lead.nurturing.stage}` : 'No nurture'}</small>
+        <small>Health: {lead.health.score} · {lead.health.classification}</small>
       </div>
       <div className="lead-score">{lead.score}</div>
       <StatusBadge status={lead.status} />
-      {!lead.compliance.compliant && <span className="status-badge status-warning">Compliance Flag</span>}
+      <div style={{ display: 'grid', gap: '0.2rem' }}>
+        {lead.exclusion.excluded && <span className="status-badge status-muted">Excluded</span>}
+        {!lead.compliance.compliant && <span className="status-badge status-warning">Compliance Flag</span>}
+      </div>
       <Link to={`/leads/${encodeURIComponent(lead.id)}`} className="link-button">
         View
       </Link>

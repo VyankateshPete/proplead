@@ -3,6 +3,8 @@ import { useAppData } from '../context/AppDataContext'
 import { filterByRange, getReferenceDate } from '../utils/filters'
 import { exportLeadsToCsv } from '../lib/leadData'
 import type { DateRangeFilter, LeadSource, LeadStatus } from '../types'
+import { getAttributionChannelPerformance, getLeadHealthSummary } from '../utils/metrics'
+import { getSmartReportInsights } from '../utils/smartFeatures'
 
 const downloadCsv = (filename: string, csvText: string): void => {
   const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' })
@@ -39,6 +41,12 @@ export const ReportsPage = () => {
       })),
     [reportLeads],
   )
+  const healthSummary = useMemo(() => getLeadHealthSummary(reportLeads), [reportLeads])
+  const attributionSummary = useMemo(
+    () => getAttributionChannelPerformance(reportLeads),
+    [reportLeads],
+  )
+  const insights = useMemo(() => getSmartReportInsights(reportLeads), [reportLeads])
 
   return (
     <section>
@@ -101,6 +109,14 @@ export const ReportsPage = () => {
                 }
               </p>
             </div>
+            <div className="metric-tile">
+              <p className="kv-key">Avg health score</p>
+              <p className="metric-value">{healthSummary.avgHealth}</p>
+            </div>
+            <div className="metric-tile">
+              <p className="kv-key">Excluded leads</p>
+              <p className="metric-value">{healthSummary.excluded}</p>
+            </div>
           </div>
         </article>
 
@@ -123,6 +139,53 @@ export const ReportsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </article>
+      </div>
+
+      <div className="two-col">
+        <article className="surface panel">
+          <h2 className="panel-title">Multi-Touch Attribution Performance</h2>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th>Credit</th>
+                  <th>Leads</th>
+                  <th>High-intent rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributionSummary.map((row) => (
+                  <tr key={row.channel}>
+                    <td>{row.channel}</td>
+                    <td>{row.credit}</td>
+                    <td>{row.leads}</td>
+                    <td>{row.highIntentRate}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="surface panel">
+          <h2 className="panel-title">AI Smart Reporting Insights</h2>
+          <p className="panel-subtitle">Actionable recommendations generated from current report scope</p>
+          <div className="kv-list">
+            {insights.map((insight) => (
+              <div className="metric-tile" key={insight.id}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem' }}>
+                  <p className="panel-title" style={{ fontSize: '0.92rem' }}>
+                    {insight.title}
+                  </p>
+                  <span className="status-badge status-info">{insight.priority}</span>
+                </div>
+                <p className="subtle">{insight.finding}</p>
+                <p className="kv-key">{insight.recommendation}</p>
+              </div>
+            ))}
           </div>
         </article>
       </div>

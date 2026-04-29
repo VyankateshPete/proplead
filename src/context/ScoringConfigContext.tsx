@@ -4,7 +4,7 @@ import type { ScoringConfig } from '../types'
 
 interface ScoringConfigContextValue {
   scoringConfig: ScoringConfig
-  setScoringConfig: (config: ScoringConfig) => void
+  setScoringConfig: (config: ScoringConfig | ((previous: ScoringConfig) => ScoringConfig)) => void
 }
 
 const ScoringConfigContext = createContext<ScoringConfigContextValue | null>(null)

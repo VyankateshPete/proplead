@@ -59,6 +59,17 @@ export const SettingsPage = () => {
         adInteractions: clamp(merged.engagementWeights.adInteractions, 0, 50),
         formSubmissions: clamp(merged.engagementWeights.formSubmissions, 0, 50),
       },
+      campaignRules: merged.campaignRules,
+      exclusionRules: {
+        inactivityDays: clamp(merged.exclusionRules.inactivityDays, 7, 120),
+        minHealthScore: clamp(merged.exclusionRules.minHealthScore, 0, 100),
+        excludedIndustries: merged.exclusionRules.excludedIndustries.filter(Boolean),
+      },
+      learning: {
+        enabled: merged.learning.enabled,
+        learningRate: clamp(merged.learning.learningRate, 0, 1),
+        lookbackDays: clamp(merged.learning.lookbackDays, 7, 120),
+      },
     })
   }
 
@@ -202,6 +213,82 @@ export const SettingsPage = () => {
         </article>
 
         <article className="surface panel">
+          <h2 className="panel-title">Continuous Learning + Exclusion Rules</h2>
+          <p className="panel-subtitle">Tune model adaptation and automatic lead suppression</p>
+          <div className="kv-list">
+            <div className="kv-row">
+              <span className="kv-key">Continuous learning</span>
+              <button
+                type="button"
+                className={`btn ${scoringConfig.learning.enabled ? 'btn-primary' : ''}`}
+                onClick={() =>
+                  updateConfig({
+                    learning: {
+                      ...scoringConfig.learning,
+                      enabled: !scoringConfig.learning.enabled,
+                    },
+                  })
+                }
+              >
+                {scoringConfig.learning.enabled ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
+            <div className="kv-row">
+              <span className="kv-key">Learning rate</span>
+              {numberField(
+                Number(scoringConfig.learning.learningRate.toFixed(2)),
+                (value) =>
+                  updateConfig({
+                    learning: { ...scoringConfig.learning, learningRate: value },
+                  }),
+                0,
+                1,
+                0.05,
+              )}
+            </div>
+            <div className="kv-row">
+              <span className="kv-key">Learning lookback (days)</span>
+              {numberField(
+                scoringConfig.learning.lookbackDays,
+                (value) =>
+                  updateConfig({
+                    learning: { ...scoringConfig.learning, lookbackDays: value },
+                  }),
+                7,
+                120,
+                1,
+              )}
+            </div>
+            <div className="kv-row">
+              <span className="kv-key">Exclude if inactive (days)</span>
+              {numberField(
+                scoringConfig.exclusionRules.inactivityDays,
+                (value) =>
+                  updateConfig({
+                    exclusionRules: { ...scoringConfig.exclusionRules, inactivityDays: value },
+                  }),
+                7,
+                120,
+                1,
+              )}
+            </div>
+            <div className="kv-row">
+              <span className="kv-key">Minimum health score</span>
+              {numberField(
+                scoringConfig.exclusionRules.minHealthScore,
+                (value) =>
+                  updateConfig({
+                    exclusionRules: { ...scoringConfig.exclusionRules, minHealthScore: value },
+                  }),
+                0,
+                100,
+                1,
+              )}
+            </div>
+          </div>
+        </article>
+
+        <article className="surface panel">
           <h2 className="panel-title">Automation + Compliance</h2>
           <p className="panel-subtitle">Lead routing, notifications, and TCPA checks</p>
           <div className="kv-list">
@@ -228,6 +315,39 @@ export const SettingsPage = () => {
           </div>
         </article>
       </div>
+
+      <article className="surface panel" style={{ marginTop: '1rem' }}>
+        <h2 className="panel-title">Campaign-Specific Scoring Rules</h2>
+        <p className="panel-subtitle">Source-aware scoring priorities for each campaign profile</p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Rule</th>
+                <th>Source</th>
+                <th>Source boost</th>
+                <th>Email opens</th>
+                <th>Email clicks</th>
+                <th>Ad interactions</th>
+                <th>Form submissions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scoringConfig.campaignRules.map((rule) => (
+                <tr key={rule.id}>
+                  <td>{rule.label}</td>
+                  <td>{rule.source}</td>
+                  <td>{rule.sourceWeightBoost}</td>
+                  <td>{rule.behaviorWeights.emailOpens}</td>
+                  <td>{rule.behaviorWeights.emailClicks}</td>
+                  <td>{rule.behaviorWeights.adInteractions}</td>
+                  <td>{rule.behaviorWeights.formSubmissions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
 
       <article className="surface panel" style={{ marginTop: '1rem' }}>
         <h2 className="panel-title">Integrations</h2>

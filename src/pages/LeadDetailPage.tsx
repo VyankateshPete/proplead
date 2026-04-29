@@ -97,6 +97,32 @@ export const LeadDetailPage = () => {
         <h2>Lead Score</h2>
         <p className="score-big">{lead.score}/100</p>
         <StatusBadge status={lead.status} />
+        <p className="subtle" style={{ marginTop: '0.5rem' }}>
+          Continuous learning adjustment: {lead.learning.adjustment >= 0 ? '+' : ''}
+          {lead.learning.adjustment} · confidence {Math.round(lead.learning.confidence * 100)}%
+        </p>
+        <p className="subtle">{lead.learning.reason}</p>
+      </article>
+
+      <article className="panel">
+        <h2>Lead Health + Prioritization</h2>
+        <div className="metric-stack">
+          <div className="metric-tile">
+            <p className="kv-key">Health score</p>
+            <p className="metric-value">{lead.health.score}</p>
+          </div>
+          <div className="metric-tile">
+            <p className="kv-key">Engagement score</p>
+            <p className="metric-value">{lead.health.engagementScore}</p>
+          </div>
+          <div className="metric-tile">
+            <p className="kv-key">Intent score</p>
+            <p className="metric-value">{lead.health.intentScore}</p>
+          </div>
+        </div>
+        <p className="subtle" style={{ marginTop: '0.6rem' }}>
+          Classification: {lead.health.classification} · {lead.health.recommendation}
+        </p>
       </article>
 
       <article className="panel">
@@ -112,6 +138,43 @@ export const LeadDetailPage = () => {
         <p className="subtle">
           Last engagement: {new Date(lead.behavioral.lastEngagedAt).toLocaleString('en-US')}
         </p>
+      </article>
+
+      <article className="panel">
+        <h2>Data Verification + Enrichment</h2>
+        <dl className="definition-list">
+          <div>
+            <dt>Email validation</dt>
+            <dd>{lead.validation.emailValid ? 'Valid' : 'Invalid'}</dd>
+          </div>
+          <div>
+            <dt>Phone validation</dt>
+            <dd>{lead.validation.phoneValid ? 'Valid' : 'Invalid'}</dd>
+          </div>
+          <div>
+            <dt>Duplicate risk</dt>
+            <dd>{lead.validation.duplicateEmail || lead.validation.duplicatePhone ? 'Detected' : 'None'}</dd>
+          </div>
+          <div>
+            <dt>Enrichment confidence</dt>
+            <dd>{lead.enrichment.confidence}%</dd>
+          </div>
+          <div>
+            <dt>Company size</dt>
+            <dd>{lead.enrichment.companySize}</dd>
+          </div>
+          <div>
+            <dt>Revenue band</dt>
+            <dd>{lead.enrichment.revenueBand}</dd>
+          </div>
+          <div>
+            <dt>Providers</dt>
+            <dd>{lead.enrichment.providerCoverage.join(', ')}</dd>
+          </div>
+        </dl>
+        {lead.validation.issues.length > 0 && (
+          <p className="subtle">Validation issues: {lead.validation.issues.join('; ')}</p>
+        )}
       </article>
 
       <article className="panel">
@@ -171,6 +234,35 @@ export const LeadDetailPage = () => {
         <p className="subtle">
           Lead quality insight: {lead.qualityInsight.scoreBand} · {lead.qualityInsight.summary}
         </p>
+      </article>
+
+      <article className="panel">
+        <h2>Multi-Touch Attribution</h2>
+        <p className="subtle">
+          Model: {lead.attribution.model} · Top channel: {lead.attribution.topChannel}
+        </p>
+        <div className="table-wrap" style={{ marginTop: '0.5rem' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th>Interaction</th>
+                <th>Credit</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lead.attribution.touches.map((touch) => (
+                <tr key={touch.id}>
+                  <td>{touch.channel}</td>
+                  <td>{touch.interaction}</td>
+                  <td>{Math.round(touch.credit * 100)}%</td>
+                  <td>{new Date(touch.timestamp).toLocaleString('en-US')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </article>
 
       <article className="panel">
@@ -253,6 +345,11 @@ export const LeadDetailPage = () => {
           {lead.automation.salesNotificationQueued ? ' · Sales notification queued' : ''}
           {lead.automation.crmAutoPush ? ' · CRM auto-push enabled' : ''}
         </p>
+        {lead.exclusion.excluded && (
+          <p className="subtle">
+            Exclusion active: {lead.exclusion.reasons.join('; ')}. Lead is suppressed from active outbound.
+          </p>
+        )}
       </article>
     </section>
   )

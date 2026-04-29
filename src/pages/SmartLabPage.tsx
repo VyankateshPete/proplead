@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAppData } from '../context/AppDataContext'
-import { getAbTestResults, getSmartAlerts } from '../utils/smartFeatures'
+import { getAbTestResults, getLeadAnomalies, getSmartAlerts } from '../utils/smartFeatures'
 
 const unitToCount = (value: string): number => {
   if (value === '1-5 units') return 3
@@ -21,6 +21,7 @@ export const SmartLabPage = () => {
 
   const alerts = useMemo(() => getSmartAlerts(leads), [leads])
   const abResults = useMemo(() => getAbTestResults(leads), [leads])
+  const anomalies = useMemo(() => getLeadAnomalies(leads), [leads])
 
   const chatbotResult = useMemo(() => {
     const units = unitToCount(unitsInput)
@@ -69,6 +70,31 @@ export const SmartLabPage = () => {
         </article>
 
         <article className="surface panel">
+          <h2 className="panel-title">Anomaly Detection Console</h2>
+          <p className="panel-subtitle">Source spikes, validation irregularities, and duplicate patterns</p>
+          <div className="kv-list">
+            {anomalies.length === 0 ? (
+              <p className="subtle">No anomalies detected in current lead set.</p>
+            ) : (
+              anomalies.map((anomaly) => (
+                <div key={anomaly.id} className="metric-tile">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <p className="panel-title" style={{ fontSize: '0.92rem' }}>
+                      {anomaly.title}
+                    </p>
+                    <span className={`status-badge status-${anomaly.severity}`}>{anomaly.severity}</span>
+                  </div>
+                  <p className="subtle">{anomaly.description}</p>
+                  <p className="kv-key">Affected leads: {anomaly.affectedCount}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </article>
+      </div>
+
+      <div className="two-col">
+        <article className="surface panel">
           <h2 className="panel-title">Smart A/B Testing Center</h2>
           <p className="panel-subtitle">Automated optimization across forms, emails, and creatives</p>
           <div className="table-wrap">
@@ -94,6 +120,39 @@ export const SmartLabPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </article>
+        <article className="surface panel">
+          <h2 className="panel-title">Continuous Learning Sandbox</h2>
+          <p className="panel-subtitle">See how behavior and source context can adapt lead scoring</p>
+          <div className="metric-stack">
+            <div className="metric-tile">
+              <p className="kv-key">Learning signals</p>
+              <p className="metric-value">{Math.round((leads.filter((lead) => lead.learning.adjustment !== 0).length / Math.max(leads.length, 1)) * 100)}%</p>
+              <p className="subtle">of leads received score adaptation</p>
+            </div>
+            <div className="metric-tile">
+              <p className="kv-key">Avg confidence</p>
+              <p className="metric-value">
+                {Math.round(
+                  (leads.reduce((accumulator, lead) => accumulator + lead.learning.confidence, 0) /
+                    Math.max(leads.length, 1)) *
+                    100,
+                )}
+                %
+              </p>
+              <p className="subtle">historical pattern confidence</p>
+            </div>
+            <div className="metric-tile">
+              <p className="kv-key">Mean adjustment</p>
+              <p className="metric-value">
+                {(
+                  leads.reduce((accumulator, lead) => accumulator + lead.learning.adjustment, 0) /
+                  Math.max(leads.length, 1)
+                ).toFixed(1)}
+              </p>
+              <p className="subtle">score points from adaptation loop</p>
+            </div>
           </div>
         </article>
       </div>
